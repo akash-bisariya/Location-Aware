@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">LocationAware</string>
+    <string name="txt_permission_denied_request">We are unable to get location for the app</string>
+</resources>
