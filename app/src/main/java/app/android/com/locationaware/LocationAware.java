@@ -22,8 +22,8 @@ import com.google.android.gms.tasks.OnSuccessListener;
  */
 
 public class LocationAware {
-    private static FusedLocationProviderClient mFusedLocationClient;
-    private static final LocationAware ourInstance = new LocationAware();
+    private FusedLocationProviderClient mFusedLocationClient;
+    private static LocationAware ourInstance = new LocationAware();
     private Activity mActivity;
     private LocationRequest mLocationRequest;
     private Location mLocation;
@@ -32,9 +32,7 @@ public class LocationAware {
     private String mAddressOutput;
     private CurrentLocationCallback currentLocationCallback;
 
-    static LocationAware getInstance(Activity activity) {
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(activity);
-
+    static LocationAware getInstance() {
         return ourInstance;
     }
 
@@ -42,7 +40,8 @@ public class LocationAware {
     }
 
     void getCurrentLocation(CurrentLocationCallback currentLocationCallback, final Activity activity) {
-        mActivity =activity;
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(activity);
+        mActivity = activity;
         if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
@@ -56,9 +55,6 @@ public class LocationAware {
                     mResultReceiver = new ResultReceiverIntentService(new Handler());
                     startIntentService();
                 }
-//                else {
-//                    createLocationRequest();
-//                }
 
 
             }
@@ -73,8 +69,7 @@ public class LocationAware {
     }
 
 
-    private class ResultReceiverIntentService extends ResultReceiver
-    {
+    private class ResultReceiverIntentService extends ResultReceiver {
 
         /**
          * Create a new ResultReceive to receive results.  Your
@@ -84,7 +79,7 @@ public class LocationAware {
          * @param handler
          */
         public ResultReceiverIntentService(Handler handler) {
-           super(handler);
+            super(handler);
 
         }
 

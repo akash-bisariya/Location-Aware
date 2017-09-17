@@ -40,7 +40,7 @@ public class ReverseGeocodingIntentService extends IntentService {
 
 
             Location location = intent.getExtras().getParcelable(Constants.LOCATION_DATA_EXTRA);
-            mReceiver  = intent.getExtras().getParcelable(Constants.LOCATION_RECEIVER);
+            mReceiver = intent.getExtras().getParcelable(Constants.LOCATION_RECEIVER);
 //            mReceiver = intent.getExtras(Constants.LOCATION_RECEIVER);
             List<Address> addresses = null;
 
@@ -49,14 +49,13 @@ public class ReverseGeocodingIntentService extends IntentService {
 
                 if (addresses == null || addresses.size() == 0) {
                     deliverResultToReceiver(Constants.FAILURE_RESULT, "Error");
-                }
-                else {
+                } else {
                     Address address = addresses.get(0);
                     ArrayList<String> addressFragments = new ArrayList<String>();
 
                     // Fetch the address lines using getAddressLine,
                     // join them, and send them to the thread.
-                    for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
+                    for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
                         addressFragments.add(address.getAddressLine(i));
                     }
                     Log.i("TAG", "address_found");

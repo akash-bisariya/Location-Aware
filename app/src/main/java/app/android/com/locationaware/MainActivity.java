@@ -37,7 +37,7 @@ import com.google.android.gms.tasks.Task;
 
 import java.security.Permissions;
 
-public class MainActivity extends AppCompatActivity implements CurrentLocationCallback{
+public class MainActivity extends AppCompatActivity implements CurrentLocationCallback {
     public static final int LOCATION_AWARE_ACCESS_PERMISSION_REQUEST_CODE = 111111;
     public static final int LOCATION_AWARE_SETTINGS_CHANGE_REQUEST_CODE = 22222;
     private FusedLocationProviderClient mFusedLocationClient;
@@ -54,8 +54,8 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         btnSetLocationUpdates = (Button) findViewById(R.id.btn_set_location_updates);
-        btnRemoveLocationUpdates=(Button)findViewById(R.id.btn_remove_location_updates);
-        btnGetCurrentLocation= (Button) findViewById(R.id.btn_get_current_location);
+        btnRemoveLocationUpdates = (Button) findViewById(R.id.btn_remove_location_updates);
+        btnGetCurrentLocation = (Button) findViewById(R.id.btn_get_current_location);
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -73,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
             @Override
             public void onClick(View v) {
                 if (checkPermissionGranted()) {
-                    LocationAware.getInstance(MainActivity.this).getCurrentLocation(MainActivity.this,MainActivity.this);
+                    LocationAware.getInstance().getCurrentLocation(MainActivity.this, MainActivity.this);
                 }
             }
         });
@@ -82,11 +82,10 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
         btnRemoveLocationUpdates.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mRequestingLocationUpdates)
-                removeLocationUpdateS();
+                if (mRequestingLocationUpdates)
+                    removeLocationUpdateS();
             }
         });
-
 
 
         mLocationCallback = new LocationCallback() {
@@ -98,21 +97,13 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
         };
 
 
-
-
-
     }
 
 
     private boolean checkPermissionGranted() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//                if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
-//                    Toast.makeText(this,"Permission required to access location",Toast.LENGTH_SHORT).show();
-//
-//                }
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_AWARE_ACCESS_PERMISSION_REQUEST_CODE);
-
                 return false;
             } else
                 return true;
@@ -128,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
         if (grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-           LocationAware.getInstance(this).getCurrentLocation(this,MainActivity.this);
+            LocationAware.getInstance().getCurrentLocation(this, MainActivity.this);
 
 
         } else {
@@ -152,7 +143,6 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
                     });
         }
     }
-
 
 
     private void createLocationRequest() {
@@ -216,12 +206,10 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
     }
 
 
-    private void removeLocationUpdateS()
-    {
+    private void removeLocationUpdateS() {
         mFusedLocationClient.removeLocationUpdates(mLocationCallback);
-        mRequestingLocationUpdates=false;
+        mRequestingLocationUpdates = false;
     }
-
 
 
     @Override
@@ -232,13 +220,13 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback,null);
+                mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, null);
                 break;
         }
     }
 
     @Override
     public void CurrentLocation(String location) {
-        Toast.makeText(this,location,Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, location, Toast.LENGTH_SHORT).show();
     }
 }

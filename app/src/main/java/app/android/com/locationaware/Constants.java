@@ -5,8 +5,8 @@ package app.android.com.locationaware;
  */
 
 public class Constants {
-    public static final String LOCATION_DATA_EXTRA ="location_extra";
-    public static final String LOCATION_RECEIVER ="location_receiver";
+    public static final String LOCATION_DATA_EXTRA = "location_extra";
+    public static final String LOCATION_RECEIVER = "location_receiver";
     public static final String RESULT_DATA_KEY = "result_data_key";
     public static final String RESULT_SUCCESS = "resultSuccess";
     public static final String RESULT_FAILURE = "resultFailure";
