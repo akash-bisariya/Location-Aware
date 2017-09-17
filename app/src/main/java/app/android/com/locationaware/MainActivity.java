@@ -46,13 +46,19 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
     private LocationCallback mLocationCallback;
     private boolean mRequestingLocationUpdates = false;
     Button btnSetLocationUpdates;
+    Button btnGetCurrentLocation;
+    Button btnRemoveLocationUpdates;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         btnSetLocationUpdates = (Button) findViewById(R.id.btn_set_location_updates);
+        btnRemoveLocationUpdates=(Button)findViewById(R.id.btn_remove_location_updates);
+        btnGetCurrentLocation= (Button) findViewById(R.id.btn_get_current_location);
+
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
         btnSetLocationUpdates.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -63,6 +69,24 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
         });
 
 
+        btnGetCurrentLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (checkPermissionGranted()) {
+                    LocationAware.getInstance(MainActivity.this).getCurrentLocation(MainActivity.this,MainActivity.this);
+                }
+            }
+        });
+
+
+        btnRemoveLocationUpdates.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mRequestingLocationUpdates)
+                removeLocationUpdateS();
+            }
+        });
+
 
 
         mLocationCallback = new LocationCallback() {
@@ -70,20 +94,11 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
             public void onLocationResult(LocationResult locationResult) {
                 mLocation = locationResult.getLastLocation();
                 Toast.makeText(MainActivity.this, "" + mLocation.getLatitude() + " " + mLocation.getLongitude(), Toast.LENGTH_SHORT).show();
-                if(!mRequestingLocationUpdates)
-                {
-                    removeLocationUpdateS();
-                }
-
             }
         };
 
 
-        if (checkPermissionGranted()) {
-//            getCurrentLocation();
 
-            LocationAware.getInstance(this).getCurrentLocation(this);
-        }
 
 
     }
@@ -113,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
         if (grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-           LocationAware.getInstance(this).getCurrentLocation(this);
+           LocationAware.getInstance(this).getCurrentLocation(this,MainActivity.this);
 
 
         } else {
@@ -138,22 +153,7 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
         }
     }
 
-    private void getCurrentLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        mFusedLocationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
-                if (location != null) {
-                    mLocation = location;
-                    Toast.makeText(MainActivity.this, "" + mLocation.getLatitude() + " " + mLocation.getLongitude(), Toast.LENGTH_SHORT).show();
-                } else {
-                    createLocationRequest();
-                }
-            }
-        });
-    }
+
 
     private void createLocationRequest() {
         mLocationRequest = new LocationRequest();

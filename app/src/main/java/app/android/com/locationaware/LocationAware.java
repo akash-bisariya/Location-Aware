@@ -24,17 +24,16 @@ import com.google.android.gms.tasks.OnSuccessListener;
 public class LocationAware {
     private static FusedLocationProviderClient mFusedLocationClient;
     private static final LocationAware ourInstance = new LocationAware();
-    private static Activity mActivity;
+    private Activity mActivity;
     private LocationRequest mLocationRequest;
     private Location mLocation;
     private ResultReceiver mResultReceiver;
     private LocationCallback mLocationCallback;
     private String mAddressOutput;
-    CurrentLocationCallback currentLocationCallback;
+    private CurrentLocationCallback currentLocationCallback;
 
-    public static LocationAware getInstance(Activity activity) {
-        mActivity =activity;
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(mActivity);
+    static LocationAware getInstance(Activity activity) {
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(activity);
 
         return ourInstance;
     }
@@ -42,8 +41,9 @@ public class LocationAware {
     private LocationAware() {
     }
 
-    protected void getCurrentLocation(CurrentLocationCallback currentLocationCallback) {
-        if (ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+    void getCurrentLocation(CurrentLocationCallback currentLocationCallback, final Activity activity) {
+        mActivity =activity;
+        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
         this.currentLocationCallback = currentLocationCallback;
@@ -52,7 +52,7 @@ public class LocationAware {
             public void onSuccess(Location location) {
                 if (location != null) {
                     mLocation = location;
-                    Toast.makeText(mActivity, "" + mLocation.getLatitude() + " " + mLocation.getLongitude(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, "" + mLocation.getLatitude() + " " + mLocation.getLongitude(), Toast.LENGTH_SHORT).show();
                     mResultReceiver = new ResultReceiverIntentService(new Handler());
                     startIntentService();
                 }
@@ -65,7 +65,7 @@ public class LocationAware {
         });
     }
 
-    protected void startIntentService() {
+    private void startIntentService() {
         Intent intent = new Intent(mActivity, ReverseGeocodingIntentService.class);
         intent.putExtra(Constants.LOCATION_RECEIVER, mResultReceiver);
         intent.putExtra(Constants.LOCATION_DATA_EXTRA, mLocation);
@@ -73,7 +73,7 @@ public class LocationAware {
     }
 
 
-    class ResultReceiverIntentService extends ResultReceiver
+    private class ResultReceiverIntentService extends ResultReceiver
     {
 
         /**
