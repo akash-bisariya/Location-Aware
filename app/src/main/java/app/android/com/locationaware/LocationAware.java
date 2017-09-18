@@ -37,7 +37,6 @@ import com.google.android.gms.tasks.Task;
 public class LocationAware {
     private FusedLocationProviderClient mFusedLocationClient;
     private static LocationAware ourInstance = new LocationAware();
-    private Activity mActivity;
     private LocationRequest mLocationRequest;
     private Location mLocation;
     private ResultReceiver mResultReceiver;
@@ -52,10 +51,17 @@ public class LocationAware {
     private LocationAware() {
     }
 
-    void getCurrentLocation(CurrentLocationCallback currentLocationCallback, final Activity activity) {
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(activity);
-        mActivity = activity;
-        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+    /**
+     * This method is used to get current location of user.
+     *
+     * @param currentLocationCallback Callback on which the current location will be passed.
+     */
+    void getCurrentLocation(final CurrentLocationCallback currentLocationCallback) {
+        //fused client used to get current location
+        if (mFusedLocationClient == null)
+            mFusedLocationClient = LocationServices.getFusedLocationProviderClient((Activity)currentLocationCallback);
+        if (ActivityCompat.checkSelfPermission((Activity)currentLocationCallback, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission((Activity)currentLocationCallback, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
         this.currentLocationCallback = currentLocationCallback;
@@ -64,9 +70,9 @@ public class LocationAware {
             public void onSuccess(Location location) {
                 if (location != null) {
                     mLocation = location;
-                    Toast.makeText(activity, "" + mLocation.getLatitude() + " " + mLocation.getLongitude(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText((Activity)currentLocationCallback, "" + mLocation.getLatitude() + " " + mLocation.getLongitude(), Toast.LENGTH_SHORT).show();
                     mResultReceiver = new ResultReceiverIntentService(new Handler());
-                    startIntentService();
+                    startIntentService((Activity)currentLocationCallback);
                 }
 
 
@@ -127,10 +133,12 @@ public class LocationAware {
                 // starting location updates service providing two extras in intent as -
                 // 1.Location_Update_Interval and
                 // 2.Smallest_Distance_Before_Location_Update
+
                 Intent intent = new Intent(activity, LocationUpdatesService.class);
                 intent.putExtra(Constants.LOCATION_UPDATE_TIME, String.valueOf(locationUpdateTimeinMiliSec));
                 intent.putExtra(Constants.LOCATION_UPDATE_DISPLACEMENT, String.valueOf(smallestDisplacementMeters));
                 activity.startService(intent);
+                Toast.makeText(activity,"Requesting location updates",Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -157,13 +165,23 @@ public class LocationAware {
         });
     }
 
-    private void startIntentService() {
-        Intent intent = new Intent(mActivity, ReverseGeocodingIntentService.class);
+    private void startIntentService(Activity activity) {
+        Intent intent = new Intent(activity, ReverseGeocodingIntentService.class);
         intent.putExtra(Constants.LOCATION_RECEIVER, mResultReceiver);
         intent.putExtra(Constants.LOCATION_DATA_EXTRA, mLocation);
-        mActivity.startService(intent);
+        activity.startService(intent);
     }
 
+
+    /**
+     * Method to remove location updates
+     */
+    public void removeLocationUpdates(Activity activity) {
+        if (mLocationCallback != null) {
+            activity.stopService(new Intent(activity, LocationUpdatesService.class));
+            Toast.makeText(activity,"Location updates removed",Toast.LENGTH_SHORT).show();
+        }
+    }
 
     private class ResultReceiverIntentService extends ResultReceiver {
 
@@ -188,7 +206,7 @@ public class LocationAware {
 
             // Show a toast message if an address was found.
             if (resultCode == Constants.SUCCESS_RESULT) {
-                currentLocationCallback.CurrentLocation(mAddressOutput);
+                currentLocationCallback.CurrentLocation(mAddressOutput,mLocation);
             }
         }
     }

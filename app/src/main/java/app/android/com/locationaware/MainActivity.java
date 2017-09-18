@@ -1,7 +1,10 @@
 package app.android.com.locationaware;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -12,10 +15,12 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.ApiException;
@@ -35,19 +40,18 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
+import org.w3c.dom.Text;
+
 import java.security.Permissions;
 
 public class MainActivity extends AppCompatActivity implements CurrentLocationCallback {
     public static final int LOCATION_AWARE_ACCESS_PERMISSION_REQUEST_CODE = 111111;
-    public static final int LOCATION_AWARE_SETTINGS_CHANGE_REQUEST_CODE = 22222;
-    private FusedLocationProviderClient mFusedLocationClient;
-    LocationRequest mLocationRequest;
-    Location mLocation;
-    private LocationCallback mLocationCallback;
     private boolean mRequestingLocationUpdates = false;
-    Button btnSetLocationUpdates;
-    Button btnGetCurrentLocation;
-    Button btnRemoveLocationUpdates;
+    private Button btnSetLocationUpdates;
+    private Button btnGetCurrentLocation;
+    private Button btnRemoveLocationUpdates;
+    private TextView tvLocation;
+    private LocationReceiver mLocationReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,17 +60,19 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
         btnSetLocationUpdates = (Button) findViewById(R.id.btn_set_location_updates);
         btnRemoveLocationUpdates = (Button) findViewById(R.id.btn_remove_location_updates);
         btnGetCurrentLocation = (Button) findViewById(R.id.btn_get_current_location);
+        tvLocation = (TextView) findViewById(R.id.tv_location);
 
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        //initializing broadcast receiver
+        mLocationReceiver = new LocationReceiver();
+
 
         btnSetLocationUpdates.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 mRequestingLocationUpdates = true;
-                createLocationRequest();
 
-
-
+                //calling for location updates with time interval and minimum displacement distance
+                LocationAware.getInstance().getLocationUpdates(MainActivity.this, 5000, 10);
             }
         });
 
@@ -75,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
             @Override
             public void onClick(View v) {
                 if (checkPermissionGranted()) {
-                    LocationAware.getInstance().getCurrentLocation(MainActivity.this, MainActivity.this);
+                    LocationAware.getInstance().getCurrentLocation(MainActivity.this);
                 }
             }
         });
@@ -85,20 +91,9 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
             @Override
             public void onClick(View v) {
                 if (mRequestingLocationUpdates)
-                    removeLocationUpdateS();
+                    LocationAware.getInstance().removeLocationUpdates(MainActivity.this);
             }
         });
-
-
-        mLocationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                mLocation = locationResult.getLastLocation();
-                Toast.makeText(MainActivity.this, "" + mLocation.getLatitude() + " " + mLocation.getLongitude(), Toast.LENGTH_SHORT).show();
-            }
-        };
-
-
     }
 
 
@@ -116,12 +111,20 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
 
 
     @Override
+    protected void onStart() {
+        super.onStart();
+
+        //Registering receiver for getting location updates
+        LocalBroadcastManager.getInstance(this).registerReceiver(mLocationReceiver, new IntentFilter(Constants.LOCATION_AWARE_RECEIVING_LOCATION_UPDATE));
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-            LocationAware.getInstance().getCurrentLocation(this, MainActivity.this);
+            LocationAware.getInstance().getCurrentLocation(MainActivity.this);
 
 
         } else {
@@ -147,52 +150,6 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
     }
 
 
-    private void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(10000);
-        mLocationRequest.setFastestInterval(5000);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        LocationSettingsRequest.Builder requestBuilder = new LocationSettingsRequest.Builder();
-        requestBuilder.addLocationRequest(mLocationRequest);
-
-
-        SettingsClient client = LocationServices.getSettingsClient(this);
-        final Task<LocationSettingsResponse> task = client.checkLocationSettings(requestBuilder.build());
-        task.addOnSuccessListener(new OnSuccessListener<LocationSettingsResponse>() {
-            @Override
-            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
-                locationSettingsResponse.getLocationSettingsStates();
-                if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    return;
-                }
-                mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, null);
-            }
-        });
-
-        task.addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-                int statusCode = ((ApiException) e).getStatusCode();
-                switch (statusCode) {
-                    case CommonStatusCodes.RESOLUTION_REQUIRED:
-                        ResolvableApiException resolvable = (ResolvableApiException) e;
-                        try {
-                            resolvable.startResolutionForResult(MainActivity.this, LOCATION_AWARE_SETTINGS_CHANGE_REQUEST_CODE);
-                        } catch (IntentSender.SendIntentException e1) {
-                            e1.printStackTrace();
-                        }
-                        break;
-
-                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                        Toast.makeText(MainActivity.this, "Location settings are not available", Toast.LENGTH_SHORT).show();
-                }
-
-            }
-        });
-
-
-    }
-
     private void showSnackbar(final int mainTextStringId, final int actionStringId,
                               View.OnClickListener listener) {
         Snackbar.make(findViewById(android.R.id.content),
@@ -204,31 +161,33 @@ public class MainActivity extends AppCompatActivity implements CurrentLocationCa
     @Override
     protected void onPause() {
         super.onPause();
-        removeLocationUpdateS();
-    }
-
-
-    private void removeLocationUpdateS() {
-        mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+        // Stopping/unregistering the location receiver
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mLocationReceiver);
+        LocationAware.getInstance().removeLocationUpdates(this);
         mRequestingLocationUpdates = false;
+
     }
 
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case LOCATION_AWARE_SETTINGS_CHANGE_REQUEST_CODE:
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    return;
-                }
-                mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, null);
-                break;
+    public void CurrentLocation(String locationAddress, Location location) {
+        tvLocation.setText(locationAddress);
+    }
+
+
+    //Broadcast receiver to get location updates with defined Intent Filter
+    private class LocationReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            if (null != intent && intent.getAction().equals(Constants.LOCATION_AWARE_RECEIVING_LOCATION_UPDATE)) {
+
+                Location location = intent.getParcelableExtra(Constants.LOCATION_LATLONG);
+
+                tvLocation.setText("Location Changed " + location.getLatitude() + " " + location.getLongitude());
+            }
+
         }
-    }
-
-    @Override
-    public void CurrentLocation(String location) {
-        Toast.makeText(this, location, Toast.LENGTH_SHORT).show();
     }
 }
