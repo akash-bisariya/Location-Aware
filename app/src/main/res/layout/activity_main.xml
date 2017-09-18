@@ -32,4 +32,10 @@
         android:text="Remove location updates"
         android:id="@+id/btn_remove_location_updates"/>
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/tv_location"
+        android:text="Location"/>
+
 </LinearLayout>

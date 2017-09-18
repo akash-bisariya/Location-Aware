@@ -3,19 +3,32 @@ package app.android.com.locationaware;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.os.ResultReceiver;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.CommonStatusCodes;
+import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+
 
 /**
  * Created by akash on 29/8/17.
@@ -57,6 +70,89 @@ public class LocationAware {
                 }
 
 
+            }
+        });
+    }
+
+    /**
+     * Method to get location updates periodically.
+     *
+     * @param locationUpdateTimeinMiliSec minimum time after which location will be provided
+     * @param smallestDisplacementMeters  smallest distance after which location will be updated
+     */
+    public void getLocationUpdates(final Activity activity, final long locationUpdateTimeinMiliSec, final float smallestDisplacementMeters) {
+
+        if (mFusedLocationClient == null) {
+            //fused client used to get current location
+            mFusedLocationClient = LocationServices.getFusedLocationProviderClient(activity);
+        }
+
+        /*
+        Callback for getting location updates
+         */
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                mLocation = locationResult.getLastLocation();
+            }
+        };
+
+        /*
+        Creating Location-Request for setting update-time, accuracy and fastest interval.
+         */
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(locationUpdateTimeinMiliSec);
+        mLocationRequest.setFastestInterval(locationUpdateTimeinMiliSec / 2);
+        mLocationRequest.setSmallestDisplacement(smallestDisplacementMeters);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        LocationSettingsRequest.Builder requestBuilder = new LocationSettingsRequest.Builder();
+        requestBuilder.addLocationRequest(mLocationRequest);
+
+        /*
+        Checking for the location settings
+         */
+        SettingsClient client = LocationServices.getSettingsClient(activity);
+        Task<LocationSettingsResponse> task = client.checkLocationSettings(requestBuilder.build());
+
+        //registering success listener that is location setting are enabled
+        task.addOnSuccessListener(activity, new OnSuccessListener<LocationSettingsResponse>() {
+            @Override
+            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
+                locationSettingsResponse.getLocationSettingsStates();
+                if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
+
+
+                // starting location updates service providing two extras in intent as -
+                // 1.Location_Update_Interval and
+                // 2.Smallest_Distance_Before_Location_Update
+                Intent intent = new Intent(activity, LocationUpdatesService.class);
+                intent.putExtra(Constants.LOCATION_UPDATE_TIME, String.valueOf(locationUpdateTimeinMiliSec));
+                intent.putExtra(Constants.LOCATION_UPDATE_DISPLACEMENT, String.valueOf(smallestDisplacementMeters));
+                activity.startService(intent);
+            }
+        });
+
+        //registering failure listener that is location setting are disabled
+        task.addOnFailureListener(activity, new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                int statusCode = ((ApiException) e).getStatusCode();
+                switch (statusCode) {
+                    case CommonStatusCodes.RESOLUTION_REQUIRED:
+                        ResolvableApiException resolvable = (ResolvableApiException) e;
+                        try {
+                            //starting resolution to get location settings enabled
+                            resolvable.startResolutionForResult(activity, Constants.LOCATION_AWARE_SETTINGS_CHANGE_REQUEST_CODE);
+                        } catch (IntentSender.SendIntentException e1) {
+                            e1.printStackTrace();
+                        }
+                        break;
+
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                        Toast.makeText(activity, "Location settings are not available", Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
